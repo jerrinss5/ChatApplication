@@ -5,6 +5,9 @@ import socket
 import threading
 # library to get current thread method of threading
 from threading import current_thread
+# library to get time stamp
+from datetime import datetime
+import time
 
 
 class ThreadedServer(object):
@@ -82,8 +85,17 @@ class ThreadedServer(object):
                         print str(current_thread()) + " data received from " + str(user) + " : " + str(data)
                         if data:
                             # give the response from host to destination client
-                            req_data = (data.split('/')[3]).split(" HTTP")[0]
-                            connect_to_user_socket.send(req_data)
+                            actual_data = (data.split('/')[3]).split(" HTTP")[0]
+                            message_size = len(actual_data)
+                            time.sleep(2)
+                            # assign the new time stamp
+                            date = datetime.now()
+                            # append everything to the message body
+                            message_body = "\nDate: " + str(date) + "\nContent-Length: " + str(message_size)
+                            # actual data which needs to be sent
+                            send_data = (data.split('\n')[0]) + message_body
+                            # sending the data through the socket
+                            connect_to_user_socket.send(send_data)
                         else:
                             print str(current_thread()) + ' ' + str(user) + ' disconnected'
                             # marking the user as inactive
@@ -93,6 +105,11 @@ class ThreadedServer(object):
                             client.close()
                             return None
                     except:
+                        print str(current_thread()) + ' ' + str(user) + ' disconnected unexpectedly'
+                        # marking the user as inactive
+                        self.user_dict[user] = 0
+                        # notifying the user about unexpected closure
+                        connect_to_user_socket.send("unexpected")
                         # closing the socket for both the host and the client
                         connect_to_user_socket.close()
                         client.close()

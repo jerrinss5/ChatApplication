@@ -2,6 +2,10 @@
 import socket
 # library for threading
 import threading
+# library to get time stamp
+from datetime import datetime
+# library to get current thread method of threading
+from threading import current_thread
 
 class Client:
     def __init__(self):
@@ -22,7 +26,6 @@ class Client:
         # getting the message format
         message_start = "GET http://localhost:80/"
         message_end = " HTTP/1.1"
-        message_body = "\nHost: Localhost \nAccept-Encoding: gzip,deflate"
 
         # getting the hostname from the user
         self.dest_hostname = raw_input("Enter Destination username: ")
@@ -41,7 +44,10 @@ class Client:
             threading.Thread(target=self.listen_continously, args=()).start()
             # the chat section to get input from the user and send it to the server
             message = raw_input("Enter your message and type exit to quit: ")
+            message_size = len(message)
+            date = datetime.now()
             while True:
+                message_body = "\nDate: " + str(date) + "\nContent-Length: " + str(message_size)
                 if message == "exit":
                     self.client_connect.send(message_start + "exit" + message_end + message_body)
                     self.client_connect.close()
@@ -50,21 +56,29 @@ class Client:
                 else:
                     self.client_connect.send(message_start + message + message_end + message_body)
                 message = raw_input(">")
+                message_size = len(message)
+                date = datetime.now()
 
     def listen_continously(self):
         print 'Listening: '
         while True:
             try:
                 data = self.client_connect.recv(1024)
+                if data == "unexpected":
+                    print self.dest_hostname + " disconnected unexpectedly."
                 if data:
-                    print self.dest_hostname + ": " + data
-                    if data == "exit":
+                    req_data = (data.split('/')[3]).split(" HTTP")[0]
+                    date = (data.split('\n')[1]).split("Date: ")[1]
+                    print "(" + date + "): " + self.dest_hostname + ": " + req_data
+                    #print self.dest_hostname + ": " + req_data
+                    if req_data == "exit":
                         print self.dest_hostname + ' disconnected'
                         break
                 else:
                     self.client_connect.close()
             except:
-                self.client_connect.close()
+                print str(current_thread()) + self.dest_hostname + " disconnected unexpectedly"
+                #self.client_connect.close()
                 return False
 
 
